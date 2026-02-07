@@ -235,19 +235,40 @@ class DatabaseConnection:
             return None
         return deserialize_video(dict(row))
 
-    def list_comments(self, video_id: str) -> List[Comment]:
-        cursor = self._conn.cursor()
-        cursor.execute(f'''
-            SELECT * FROM {self._comments_table_name} WHERE videoId = ?
-        ''', (video_id,))
-        return [deserialize_comment(dict(row)) for row in cursor.fetchall()]
-
     def list_videos(self) -> List[Video]:
         cursor = self._conn.cursor()
         cursor.execute(f'''
             SELECT * FROM {self._videos_table_name}
         ''')
         return [deserialize_video(dict(row)) for row in cursor.fetchall()]
+
+    def list_comments(self) -> List[Comment]:
+        cursor = self._conn.cursor()
+        cursor.execute(f'''
+            SELECT * FROM {self._comments_table_name}
+        ''')
+        return [deserialize_comment(dict(row)) for row in cursor.fetchall()]
+
+    def list_video_comments(self, video_id: str) -> List[Comment]:
+        cursor = self._conn.cursor()
+        cursor.execute(f'''
+            SELECT * FROM {self._comments_table_name} WHERE videoId = ?
+        ''', (video_id,))
+        return [deserialize_comment(dict(row)) for row in cursor.fetchall()]
+
+    def delete_video(self, video_id: str):
+        cursor = self._conn.cursor()
+        cursor.execute(f'''
+            DELETE FROM {self._videos_table_name} WHERE id = ?
+        ''', (video_id,))
+        self._conn.commit()
+
+    def delete_video_comments(self, video_id: str):
+        cursor = self._conn.cursor()
+        cursor.execute(f'''
+            DELETE FROM {self._comments_table_name} WHERE videoId = ?
+        ''', (video_id,))
+        self._conn.commit()
 
     def videos_to_dataframe(self) -> pd.DataFrame:
         return pd.read_sql_query(f'SELECT * FROM {self._videos_table_name}', self._conn)
