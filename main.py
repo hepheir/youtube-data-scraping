@@ -1,4 +1,5 @@
 from pathlib import Path
+from googleapiclient.errors import HttpError
 import youtube as yt
 
 ################################################################
@@ -39,21 +40,28 @@ with yt.DatabaseConnection(db_path=BASE_DIR / 'data' / 'sqlite.db') as db:
     for video_count, video_url in enumerate(video_url_list, start=1):
         video_id = yt.get_video_id(video_url)
 
-        print(f'Video {video_id}   Quota {api.quota: 5d}   {video_url} ')
+        try:
+            print(f'Video {video_id}   Quota {api.quota: 5d}   {video_url} ')
 
-        if db.has_video(video_id):
-            print(f"Skipping... (Video {video_id} already exists in database.)")
-            continue
+            if db.has_video(video_id):
+                print(f"Skipping... (Video {video_id} already exists in database.)")
+                continue
 
-        video = api.get_video(video_id)
-        db.insert_video(video)
+            video = api.get_video(video_id)
+            db.insert_video(video)
 
-        for comment_count, comment in enumerate(api.get_comments(video_id), start=1):
-            print(f'  Comment {comment_count:5d}   Quota {api.quota: 5d}  ', end='\r')
-            db.insert_comment(comment)
+            for comment_count, comment in enumerate(api.get_comments(video_id), start=1):
+                print(f'  Comment {comment_count:5d}   Quota {api.quota: 5d}  ', end='\r')
+                db.insert_comment(comment)
 
-        print()
-        print(f'Done video ({video_count}/{len(video_url_list)})')
+            print()
+            print(f'Done video ({video_count}/{len(video_url_list)})')
+        except HttpError as e:
+            print(f'  HttpError: {e}')
+            print()
+            print(f'Deleting video and comments : video {video_id}')
+            db.delete_video(video_id)
+            db.delete_video_comments(video_id)
 
 
 with yt.DatabaseConnection() as db:
