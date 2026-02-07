@@ -1,3 +1,4 @@
+from datetime import date
 from pathlib import Path
 from googleapiclient.errors import HttpError
 import youtube as yt
@@ -37,9 +38,9 @@ for video_url in VIDEO_URLS.splitlines():
 
 
 with yt.DatabaseConnection(db_path=BASE_DIR / 'data' / 'sqlite.db') as db:
+    api.quota = db.get_quota(date.today(), default=10000)
     for video_count, video_url in enumerate(video_url_list, start=1):
         video_id = yt.get_video_id(video_url)
-
         try:
             print(f'Video {video_id}   Quota {api.quota: 5d}   {video_url} ')
 
@@ -62,6 +63,7 @@ with yt.DatabaseConnection(db_path=BASE_DIR / 'data' / 'sqlite.db') as db:
             print(f'Deleting video and comments : video {video_id}')
             db.delete_video(video_id)
             db.delete_video_comments(video_id)
+    db.set_quota(date.today(), api.quota)
 
 
 with yt.DatabaseConnection() as db:
