@@ -186,6 +186,14 @@ class DatabaseConnection:
         conn.row_factory = sqlite3.Row
         return conn
 
+    @property
+    def videos_table_name(self) -> str:
+        return self._videos_table_name
+
+    @property
+    def comments_table_name(self) -> str:
+        return self._comments_table_name
+
     def get_quota(self, date_: date, default: int = 10000) -> int:
         cursor = self._conn.cursor()
         cursor.execute('''
@@ -300,8 +308,14 @@ class DatabaseConnection:
         ''', (video_id,))
         self._conn.commit()
 
+    def query_to_dataframe(self, sql: str) -> pd.DataFrame:
+        return self._query_to_dataframe(sql)
+
     def videos_to_dataframe(self) -> pd.DataFrame:
-        return pd.read_sql_query(f'SELECT * FROM {self._videos_table_name}', self._conn)
+        return self._query_to_dataframe(f'SELECT * FROM {self._videos_table_name}')
 
     def comments_to_dataframe(self) -> pd.DataFrame:
-        return pd.read_sql_query(f'SELECT * FROM {self._comments_table_name}', self._conn)
+        return self._query_to_dataframe(f'SELECT * FROM {self._comments_table_name}')
+
+    def _query_to_dataframe(self, sql: str) -> pd.DataFrame:
+        return pd.read_sql_query(sql, self._conn)
