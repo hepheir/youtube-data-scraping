@@ -2,7 +2,7 @@ import json
 import sqlite3
 from datetime import date
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, Iterable, List, Optional, Union
 
 import pandas as pd
 
@@ -314,8 +314,11 @@ class DatabaseConnection:
     def videos_to_dataframe(self) -> pd.DataFrame:
         return self._query_to_dataframe(f'SELECT * FROM {self._videos_table_name}')
 
-    def comments_to_dataframe(self) -> pd.DataFrame:
-        return self._query_to_dataframe(f'SELECT * FROM {self._comments_table_name}')
+    def comments_to_dataframe(self, video_id: Optional[str] = None) -> pd.DataFrame:
+        if not video_id:
+            return self._query_to_dataframe(f'SELECT * FROM {self._comments_table_name}')
+        # 개인용 / READ ONLY 여서 SQLInjection 을 조심할 필요는 없겠으나... 추후 이 기능을 확장하려면 조심할 것.
+        return self._query_to_dataframe(f'SELECT * FROM {self._comments_table_name} WHERE videoId = ?', (video_id, ))
 
-    def _query_to_dataframe(self, sql: str) -> pd.DataFrame:
-        return pd.read_sql_query(sql, self._conn)
+    def _query_to_dataframe(self, sql: str, params: Iterable = tuple()) -> pd.DataFrame:
+        return pd.read_sql_query(sql=sql, con=self._conn, params=tuple(params))
