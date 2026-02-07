@@ -1,6 +1,7 @@
 from datetime import date
 from pathlib import Path
 from googleapiclient.errors import HttpError
+import csv
 import youtube as yt
 
 ################################################################
@@ -67,5 +68,16 @@ with yt.DatabaseConnection(db_path=BASE_DIR / 'data' / 'sqlite.db') as db:
 
 
 with yt.DatabaseConnection() as db:
-    db.videos_to_dataframe().to_csv(BASE_DIR / 'data' / 'videos.csv', index=False)
-    db.comments_to_dataframe().to_csv(BASE_DIR / 'data' / 'comments.csv', index=False)
+    csv_saving_options = {
+        'index': False,
+        'quoting': csv.QUOTE_NONE,
+        'escapechar': '\\',
+    }
+
+    videos_csv_path = BASE_DIR / 'data' / 'videos.csv'
+    db.videos_to_dataframe().to_csv(videos_csv_path, **csv_saving_options)
+    print(f'Saved videos to {videos_csv_path}')
+
+    comments_csv_path = BASE_DIR / 'data' / 'comments.csv'
+    db.comments_to_dataframe().to_csv(comments_csv_path, **csv_saving_options)
+    print(f'Saved comments to {comments_csv_path}')
