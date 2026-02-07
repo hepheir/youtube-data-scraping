@@ -1,5 +1,6 @@
 import json
 import sqlite3
+from datetime import date
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
@@ -139,6 +140,7 @@ class DatabaseConnection:
         self._comments_table_name = comments_table_name
         self._videos_table_name = videos_table_name
         self._conn = self._get_connection()
+        self._create_quota_table()
         self._create_videos_table()
         self._create_comments_table()
         self._conn.close()
@@ -149,6 +151,17 @@ class DatabaseConnection:
 
     def __exit__(self, exc_type, exc_value, traceback):
         self._conn.close()
+
+    def _create_quota_table(self):
+        # 날짜별 남은 quota 수를 저장함.
+        cursor = self._conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS quota (
+                date TEXT PRIMARY KEY,
+                value INTEGER
+            )
+        ''')
+        self._conn.commit()
 
     def _create_videos_table(self):
         cursor = self._conn.cursor()
@@ -172,6 +185,23 @@ class DatabaseConnection:
         conn = sqlite3.connect(self._db_path)
         conn.row_factory = sqlite3.Row
         return conn
+
+    def get_quota(self, date_: date, default: int = 10000) -> int:
+        cursor = self._conn.cursor()
+        cursor.execute('''
+            SELECT value FROM quota WHERE date = ?
+        ''', (date_.isoformat(),))
+        row = cursor.fetchone()
+        if not row:
+            return default
+        return row['value']
+
+    def set_quota(self, date_: date, quota: int):
+        cursor = self._conn.cursor()
+        cursor.execute('''
+            INSERT OR REPLACE INTO quota (date, value) VALUES (?, ?)
+        ''', (date_.isoformat(), quota))
+        self._conn.commit()
 
     def insert_video(self, video: Video):
         video_data = serialize_video(video)
