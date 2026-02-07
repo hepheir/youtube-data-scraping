@@ -1,2 +1,6 @@
 google-api-python-client
 pandas
+numpy
+matplotlib
+seaborn
+scikit-learn
