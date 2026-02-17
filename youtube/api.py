@@ -67,17 +67,16 @@ class BaseYoutubeAPI:
 
 
 class YoutubeAPI(BaseYoutubeAPI):
+    def get_comment_threads(self, video_id: str) -> Generator[CommentThread, None, None]:
+        """특정 동영상 안에 있는 모든 댓글 스레드를 불러온다."""
+        for thread in self.get_comment_threads_by_video(video_id=video_id):
+            yield thread
+            if thread.snippet.totalReplyCount == 0:
+                continue
+            for sub_thread in self.get_comment_threads_by_parent_comment(thread.snippet.topLevelComment.id):
+                yield sub_thread
+
     def get_comments(self, video_id: str) -> Generator[Comment, None, None]:
         """특정 동영상 안에 있는 모든 댓글을 불러온다."""
         for thread in self.get_comment_threads_by_video(video_id=video_id):
             yield thread.snippet.topLevelComment
-
-            if thread.snippet.totalReplyCount == 0:
-                continue
-
-            if thread.replies and thread.snippet.totalReplyCount == len(thread.replies.comments):
-                yield from thread.replies.comments
-                continue
-
-            for sub_thread in self.get_comment_threads_by_parent_comment(thread.snippet.topLevelComment.id):
-                yield sub_thread.snippet.topLevelComment
