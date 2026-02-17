@@ -1,12 +1,12 @@
 from typing import Generator, Optional
 
-from googleapiclient.discovery import build
-
 from youtube.models import *
 
 
 class BaseYoutubeAPI:
     def __init__(self, api_key: str, quota: int = 10000):
+        # Do lazy-loading
+        from googleapiclient.discovery import build
         self.client = build('youtube', 'v3', developerKey=api_key)
         self.quota = quota
 
