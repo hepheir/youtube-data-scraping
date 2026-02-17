@@ -12,7 +12,10 @@ from youtube.models import (
     CommentThread,
     CommentThreadListResponse,
 )
-from youtube.utils import get_video_id
+from youtube.utils import (
+    get_video_id,
+    update_video_data,
+)
 from youtube.db import (
     DATA_DIR,
     DatabaseConnection,
