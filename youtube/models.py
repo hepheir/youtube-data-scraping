@@ -1,5 +1,6 @@
+import json
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 
 __all__ = [
@@ -72,6 +73,23 @@ class Video(Resource):
         data['snippet'] = VideoSnippet.from_dict(data['snippet'])
         return cls(**data)
 
+    def flatten(self) -> Dict[str, Any]:
+        return {
+            'id': self.id,
+            'publishedAt': self.snippet.publishedAt,
+            'channelId': self.snippet.channelId,
+            'title': self.snippet.title,
+            'description': self.snippet.description,
+            'thumbnails': json.dumps(self.snippet.thumbnails, ensure_ascii=False),
+            'channelTitle': self.snippet.channelTitle,
+            'tags': json.dumps(self.snippet.tags, ensure_ascii=False),
+            'categoryId': self.snippet.categoryId,
+            'liveBroadcastContent': self.snippet.liveBroadcastContent,
+            'defaultLanguage': self.snippet.defaultLanguage,
+            'localized': json.dumps(self.snippet.localized, ensure_ascii=False),
+            'defaultAudioLanguage': self.snippet.defaultAudioLanguage,
+        }
+
 
 @dataclass
 class VideoListResponse(Resource):
@@ -121,6 +139,25 @@ class Comment(Resource):
         data['snippet'] = CommentSnippet.from_dict(data['snippet'])
         return cls(**data)
 
+    def flatten(self) -> Dict[str, Any]:
+        return {
+            'id': self.id,
+            'channelId': self.snippet.channelId,
+            'videoId': self.snippet.videoId,
+            'textDisplay': self.snippet.textDisplay,
+            'textOriginal': self.snippet.textOriginal,
+            'parentId': self.snippet.parentId,
+            'authorDisplayName': self.snippet.authorDisplayName,
+            'authorProfileImageUrl': self.snippet.authorProfileImageUrl,
+            'authorChannelUrl': self.snippet.authorChannelUrl,
+            'authorChannelId': self.snippet.authorChannelId['value'],
+            'canRate': self.snippet.canRate,
+            'viewerRating': self.snippet.viewerRating,
+            'likeCount': self.snippet.likeCount,
+            'publishedAt': self.snippet.publishedAt,
+            'updatedAt': self.snippet.updatedAt,
+        }
+
 
 @dataclass
 class CommentThreadSnippet:
@@ -163,6 +200,17 @@ class CommentThread(Resource):
         if data['replies'] is not None:
             data['replies'] = CommentThreadReplies.from_dict(data['replies'])
         return cls(**data)
+
+    def flatten(self) -> Dict[str, Any]:
+        return {
+            'id': self.id,
+            'channelId': self.snippet.channelId,
+            'videoId': self.snippet.videoId,
+            'topLevelCommentId': self.snippet.topLevelComment.id,
+            'canReply': self.snippet.canReply,
+            'totalReplyCount': self.snippet.totalReplyCount,
+            'isPublic': self.snippet.isPublic,
+        }
 
 
 @dataclass
