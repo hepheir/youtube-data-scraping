@@ -11,6 +11,7 @@ __all__ = [
     'VideoListResponse',
     'CommentSnippet',
     'Comment',
+    'CommentListResponse',
     'CommentThreadSnippet',
     'CommentThreadReplies',
     'CommentThread',
@@ -31,12 +32,13 @@ class Resource:
 
 @dataclass
 class PageInfo:
-    totalResults: int
+    totalResults: Optional[int]
     resultsPerPage: int
 
     @classmethod
     def from_dict(cls, data: Dict):
         data = data.copy()
+        data['totalResults'] = data.get('totalResults')
         return cls(**data)
 
 
@@ -107,7 +109,7 @@ class VideoListResponse(Resource):
 @dataclass
 class CommentSnippet:
     channelId: str
-    videoId: str
+    videoId: Optional[str]
     textDisplay: str
     textOriginal: str
     parentId: Optional[str]
@@ -124,6 +126,7 @@ class CommentSnippet:
     @classmethod
     def from_dict(cls, data: Dict):
         data = data.copy()
+        data['videoId'] = data.get('videoId')
         data['parentId'] = data.get('parentId')
         return cls(**data)
 
@@ -157,6 +160,21 @@ class Comment(Resource):
             'publishedAt': self.snippet.publishedAt,
             'updatedAt': self.snippet.updatedAt,
         }
+
+
+@dataclass
+class CommentListResponse(Resource):
+    pageInfo: PageInfo
+    items: List[Comment]
+    nextPageToken: Optional[str]
+
+    @classmethod
+    def from_dict(cls, data: Dict):
+        data = data.copy()
+        data['items'] = list(map(Comment.from_dict, data['items']))
+        data['pageInfo'] = PageInfo.from_dict(data['pageInfo'])
+        data['nextPageToken'] = data.get('nextPageToken')
+        return cls(**data)
 
 
 @dataclass
