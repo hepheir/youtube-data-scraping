@@ -1,64 +1,11 @@
 import sqlite3
+import pandas as pd
 from datetime import date
 from pathlib import Path
-from typing import Any, Dict, Iterable, Tuple, Union
-
-import pandas as pd
-
-from youtube.models import Comment, CommentThread, Video
+from typing import Iterable, Tuple, Type
+from youtube.models import Table, Comment, CommentThread, Video, Quota
 
 DATA_DIR = Path(__file__).resolve().parent.parent / 'data'
-
-
-class TableScheme:
-    QUOTA = {
-        'date': 'TEXT PRIMARY KEY',
-        'value': 'INTEGER',
-    }
-
-    VIDEO = {
-        'id': 'TEXT PRIMARY KEY',
-        'publishedAt': 'TEXT',
-        'channelId': 'TEXT',
-        'title': 'TEXT',
-        'description': 'TEXT',
-        'thumbnails': 'TEXT',
-        'channelTitle': 'TEXT',
-        'tags': 'TEXT',
-        'categoryId': 'TEXT',
-        'liveBroadcastContent': 'TEXT',
-        'defaultLanguage': 'TEXT',
-        'localized': 'TEXT',
-        'defaultAudioLanguage': 'TEXT',
-    }
-
-    COMMENT = {
-        'id': 'TEXT PRIMARY KEY',
-        'channelId': 'TEXT',
-        'videoId': 'TEXT',
-        'textDisplay': 'TEXT',
-        'textOriginal': 'TEXT',
-        'parentId': 'TEXT',
-        'authorDisplayName': 'TEXT',
-        'authorProfileImageUrl': 'TEXT',
-        'authorChannelUrl': 'TEXT',
-        'authorChannelId': 'TEXT',
-        'canRate': 'INTEGER',
-        'viewerRating': 'TEXT',
-        'likeCount': 'INTEGER',
-        'publishedAt': 'TEXT',
-        'updatedAt': 'TEXT',
-    }
-
-    THREAD = {
-        'id': 'TEXT PRIMARY KEY',
-        'channelId': 'TEXT',
-        'videoId': 'TEXT',
-        'topLevelCommentId': 'TEXT',
-        'canReply': 'INTEGER',
-        'totalReplyCount': 'INTEGER',
-        'isPublic': 'INTEGER',
-    }
 
 
 class DatabaseConnection:
@@ -67,10 +14,10 @@ class DatabaseConnection:
     def __init__(self, db_path=DATA_DIR / 'sqlite.db') -> None:
         self._db_path = db_path
         self._conn = self._get_connection()
-        self._create_table('quota', TableScheme.QUOTA)
-        self._create_table('videos', TableScheme.VIDEO)
-        self._create_table('comments', TableScheme.COMMENT)
-        self._create_table('threads', TableScheme.THREAD)
+        self._create_table(Quota)
+        self._create_table(Video)
+        self._create_table(Comment)
+        self._create_table(CommentThread)
         self._conn.close()
 
     def __enter__(self):
@@ -85,19 +32,20 @@ class DatabaseConnection:
         conn.row_factory = sqlite3.Row
         return conn
 
-    def _create_table(self, table_name: str, scheme: Dict[str, str]):
+    def _create_table(self, table: Type[Table]):
         cursor = self._conn.cursor()
         cursor.execute(f'''
-            CREATE TABLE IF NOT EXISTS {table_name} (
-                {', '.join([f'{col} {type_}' for col, type_ in scheme.items()])}
+            CREATE TABLE IF NOT EXISTS {table.table_name()} (
+                {', '.join([f'{col} {type_}' for col, type_ in table.table_scheme().items()])}
             )
         ''')
         self._conn.commit()
 
-    def _save_data(self, table_name: str, data: Dict[str, Any]):
+    def _save(self, row: Table):
+        data = row.serialize()
         cursor = self._conn.cursor()
         cursor.execute(f'''
-            INSERT OR REPLACE INTO {table_name} ({
+            INSERT OR REPLACE INTO {row.table_name()} ({
                 ', '.join(data.keys())
             }) VALUES ({
                 ', '.join(['?' for _ in data])
@@ -121,16 +69,10 @@ class DatabaseConnection:
         ''', (date_.isoformat(), quota))
         self._conn.commit()
 
-    def save(self, obj: Union[Video, Comment, CommentThread]):
-        if isinstance(obj, Video):
-            table_name = 'videos'
-        elif isinstance(obj, Comment):
-            table_name = 'comments'
-        elif isinstance(obj, CommentThread):
-            table_name = 'threads'
-        else:
+    def save(self, obj: Table):
+        if not isinstance(obj, Table):
             raise ValueError(f'Unsupported object type: {type(obj)}')
-        self._save_data(table_name, obj.flatten())
+        self._save(obj)
 
     def query_to_dataframe(self, sql: str, params: Iterable = tuple()) -> pd.DataFrame:
         return self._query_to_dataframe(sql=sql, params=tuple(params))
