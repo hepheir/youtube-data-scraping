@@ -24,32 +24,37 @@ def get_video_id(url: str) -> str:
 
 def update_video_data(db_path: Path, video_url: str, api_key: str, verbose: bool = True):
     """영상 URL과 API 키를 받아서 데이터베이스에 영상과 댓글 데이터를 업데이트한다."""
-    _print = print if verbose else _dummy_print
+
     api = YoutubeAPI(api_key=api_key)
     thread_count = 0
     comment_count = 0
+
+    def print_status(msg: str | None = None):
+        if not verbose:
+            return
+        if msg is None:
+            print(f'\rThread {thread_count:5d}'
+                f'\tComment {comment_count:5d}'
+                f'\tQuota {api.quota: 5d}',
+                end='  ')
+        print(msg, end='')
+
     with DatabaseConnection(db_path) as db:
         api.quota = db.get_quota()
         video_id = get_video_id(video_url)
         video = api.get_video(video_id)
         db.save(video)
-        _print()
+        print_status('\n')
         for thread in api.get_threads(video_id):
             db.save(thread)
             db.save(thread.snippet.topLevelComment)
             thread_count += 1
             comment_count += 1
-            _print(
-                f'\rThread {thread_count:5d}   Comment {comment_count:5d}   Quota {api.quota: 5d}  ', end='')
+            print_status()
             if thread.snippet.totalReplyCount != 0:
                 for comment in api.get_comments(thread.id):
                     db.save(comment)
                     comment_count += 1
-                    _print(
-                        f'\rThread {thread_count:5d}   Comment {comment_count:5d}   Quota {api.quota: 5d}  ', end='')
+                    print_status()
         db.set_quota(date.today(), api.quota)
-        _print('Done.')
-
-
-def _dummy_print(*args, **kwargs):
-    pass
+        print_status('\n')
