@@ -32,12 +32,13 @@ def update_video_data(db_path: Path, video_url: str, api_key: str, verbose: bool
     def print_status(msg: str | None = None):
         if not verbose:
             return
-        if msg is None:
+        if msg:
+            print(msg, end='')
+        else:
             print(f'\rThread {thread_count:5d}'
-                f'\tComment {comment_count:5d}'
-                f'\tQuota {api.quota: 5d}',
-                end='  ')
-        print(msg, end='')
+                  f'\tComment {comment_count:5d}'
+                  f'\tQuota {api.quota:5d}',
+                  end='  ')
 
     with DatabaseConnection(db_path) as db:
         api.quota = db.get_quota()
